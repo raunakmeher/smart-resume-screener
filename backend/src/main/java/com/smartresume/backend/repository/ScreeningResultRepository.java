@@ -14,7 +14,7 @@ public interface ScreeningResultRepository
             Long jobId
     );
 
-    List<ScreeningResult> findByJobIdOrderByMatchScoreDesc(
+    List<ScreeningResult> findByJobIdOrderByFinalScoreDesc(
             Long jobId
     );
 }

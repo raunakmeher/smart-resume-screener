@@ -39,6 +39,15 @@ public class ScreeningResult {
     private Boolean experienceFit;
 
     private Boolean educationFit;
+    private Double requiredSkillScore;
+
+    private Double semanticScore;
+
+    private Double experienceScore;
+
+    private Double preferredSkillScore;
+
+    private Double finalScore;
 
     @Column(columnDefinition = "TEXT")
     private String summary;
@@ -128,5 +137,45 @@ public class ScreeningResult {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+
+    public Double getRequiredSkillScore() {
+        return requiredSkillScore;
+    }
+
+    public Double getSemanticScore() {
+        return semanticScore;
+    }
+
+    public Double getExperienceScore() {
+        return experienceScore;
+    }
+
+    public Double getPreferredSkillScore() {
+        return preferredSkillScore;
+    }
+
+    public Double getFinalScore() {
+        return finalScore;
+    }
+    public void setRequiredSkillScore(Double requiredSkillScore) {
+        this.requiredSkillScore = requiredSkillScore;
+    }
+
+    public void setSemanticScore(Double semanticScore) {
+        this.semanticScore = semanticScore;
+    }
+
+    public void setExperienceScore(Double experienceScore) {
+        this.experienceScore = experienceScore;
+    }
+
+    public void setPreferredSkillScore(Double preferredSkillScore) {
+        this.preferredSkillScore = preferredSkillScore;
+    }
+
+    public void setFinalScore(Double finalScore) {
+        this.finalScore = finalScore;
     }
 }

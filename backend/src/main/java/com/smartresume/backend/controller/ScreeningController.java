@@ -15,7 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
+import com.smartresume.backend.service.ScoringService;
+import com.smartresume.backend.dto.ScoringResult;
 @RestController
 @RequestMapping("/api/screening")
 public class ScreeningController {
@@ -25,18 +26,20 @@ public class ScreeningController {
     private final ScreeningResultRepository screeningResultRepository;
     private final LLMService llmService;
     private final ObjectMapper objectMapper;
-
+    private final ScoringService scoringService;
     public ScreeningController(
             ResumeRepository resumeRepository,
             JobRepository jobRepository,
             ScreeningResultRepository screeningResultRepository,
-            LLMService llmService) {
+            LLMService llmService,
+            ScoringService scoringService) {
 
         this.resumeRepository = resumeRepository;
         this.jobRepository = jobRepository;
         this.screeningResultRepository =
                 screeningResultRepository;
         this.llmService = llmService;
+        this.scoringService = scoringService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -165,6 +168,12 @@ public class ScreeningController {
                             jobProfile,
                             job.getScreeningPrompt()
                     );
+            ScoringResult scoring =
+                    scoringService.calculate(
+                            candidate,
+                            jobProfile,
+                            match
+                    );
 
             ScreeningResult result =
                     screeningResultRepository
@@ -178,6 +187,25 @@ public class ScreeningController {
             result.setJobId(jobId);
             result.setMatchScore(
                     match.getMatchScore()
+            );
+            result.setRequiredSkillScore(
+                    scoring.getRequiredSkillScore()
+            );
+
+            result.setSemanticScore(
+                    scoring.getSemanticScore()
+            );
+
+            result.setExperienceScore(
+                    scoring.getExperienceScore()
+            );
+
+            result.setPreferredSkillScore(
+                    scoring.getPreferredSkillScore()
+            );
+
+            result.setFinalScore(
+                    scoring.getFinalScore()
             );
 
             result.setMatchedSkills(
@@ -221,8 +249,10 @@ public class ScreeningController {
                             resumeId,
                             "jobId",
                             jobId,
-                            "result",
-                            match
+                            "match",
+                            match,
+                            "scoring",
+                            scoring
                     )
             );
 
