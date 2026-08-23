@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-
+import com.smartresume.backend.dto.JobProfile;
 import java.util.Map;
 
 @Service
@@ -109,7 +109,77 @@ public class LLMService {
             );
         }
     }
+    public JobProfile analyzeJob(String jobDescription) {
 
+        String prompt = """
+            You are a job description analysis system.
+
+            Extract the hiring requirements from the provided job description.
+
+            Return ONLY valid JSON in this exact structure:
+
+            {
+              "requiredSkills": [],
+              "preferredSkills": [],
+              "minimumExperienceYears": 0,
+              "education": "",
+              "responsibilities": []
+            }
+
+            Rules:
+            - requiredSkills must contain skills explicitly required
+              for the role.
+            - preferredSkills must contain skills described as preferred,
+              nice-to-have or optional.
+            - Do not invent requirements.
+            - minimumExperienceYears must be a number.
+            - If experience is not specified, return 0.
+            - If education is not specified, return an empty string.
+            - Extract concise responsibilities.
+            - Return ONLY JSON.
+
+            Job Description:
+            """ + jobDescription;
+
+        Map<String, Object> body = Map.of(
+                "contents", new Object[]{
+                        Map.of(
+                                "parts", new Object[]{
+                                        Map.of("text", prompt)
+                                }
+                        )
+                }
+        );
+
+        String response = client.post()
+                .uri("/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+
+        try {
+            JsonNode root = objectMapper.readTree(response);
+
+            String text = root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+            text = cleanJson(text);
+
+            return objectMapper.readValue(text, JobProfile.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse Gemini job response", e
+            );
+        }
+    }
     private String cleanJson(String text) {
 
         text = text.trim();
