@@ -17,6 +17,20 @@ public class Resume {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String rawText;
 
+    @Column(columnDefinition = "TEXT")
+    private String skills;
+
+    @Column(columnDefinition = "TEXT")
+    private String experience;
+
+    @Column(columnDefinition = "TEXT")
+    private String education;
+
+    @Column(columnDefinition = "TEXT")
+    private String projects;
+
+    private Double totalExperienceYears;
+
     private LocalDateTime createdAt;
 
     public Resume() {
@@ -40,6 +54,26 @@ public class Resume {
         return rawText;
     }
 
+    public String getSkills() {
+        return skills;
+    }
+
+    public String getExperience() {
+        return experience;
+    }
+
+    public String getEducation() {
+        return education;
+    }
+
+    public String getProjects() {
+        return projects;
+    }
+
+    public Double getTotalExperienceYears() {
+        return totalExperienceYears;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -50,6 +84,28 @@ public class Resume {
 
     public void setRawText(String rawText) {
         this.rawText = rawText;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
+    }
+
+    public void setExperience(String experience) {
+        this.experience = experience;
+    }
+
+    public void setEducation(String education) {
+        this.education = education;
+    }
+
+    public void setProjects(String projects) {
+        this.projects = projects;
+    }
+
+    public void setTotalExperienceYears(
+            Double totalExperienceYears) {
+
+        this.totalExperienceYears = totalExperienceYears;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
