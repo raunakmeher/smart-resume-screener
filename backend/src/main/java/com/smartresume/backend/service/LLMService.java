@@ -199,43 +199,50 @@ public class LLMService {
     }
     public MatchResult matchCandidate(
             CandidateProfile candidate,
-            JobProfile job) {
+            JobProfile job,
+            String screeningPrompt) {
 
         String prompt = """
-            You are an AI recruitment matching system.
+        You are an AI recruitment matching system.
 
-            Compare the candidate profile against the job requirements.
+        Your task is to evaluate a candidate against a job
+        using ONLY evidence contained in the candidate profile,
+        job profile, and recruiter instructions.
 
-            Return ONLY valid JSON in this exact structure:
+        Return ONLY valid JSON in this exact structure:
 
-            {
-              "matchScore": 0,
-              "matchedSkills": [],
-              "missingRequiredSkills": [],
-              "preferredSkillsMatched": [],
-              "experienceFit": false,
-              "educationFit": false,
-              "summary": ""
-            }
+        {
+          "matchScore": 0,
+          "matchedSkills": [],
+          "missingRequiredSkills": [],
+          "preferredSkillsMatched": [],
+          "experienceFit": false,
+          "educationFit": false,
+          "summary": ""
+        }
 
-            Scoring rules:
-            - matchScore must be between 0 and 100.
-            - Required skills are more important than preferred skills.
-            - Consider semantic equivalents of skills.
-              For example, "Spring" and "Spring Framework" may be equivalent.
-            - Do not assume a skill exists unless supported by the candidate profile.
-            - Experience fit is true only when the candidate meets or exceeds
-              the minimum required experience.
-            - Education fit should be based only on the stated education.
-            - Do not use name, age, gender, photo, address, phone number,
-              email, nationality or other personal characteristics.
-            - Give a concise factual summary explaining the score.
+        GENERAL SCORING RULES:
+        - matchScore must be between 0 and 100.
+        - Required skills are more important than preferred skills.
+        - Consider reasonable semantic equivalents of skills.
+        - Never invent candidate skills, experience or education.
+        - Experience fit is true only when the candidate meets
+          or exceeds the required experience.
+        - Education fit must be based only on stated education.
+        - Do not use name, age, gender, photo, address, phone,
+          email, nationality or other personal characteristics.
+        - The explanation must be supported by candidate evidence.
 
-            Candidate Profile:
-            """ + toJson(candidate) + """
+        RECRUITER SCREENING INSTRUCTIONS:
+        """ + (screeningPrompt == null || screeningPrompt.isBlank()
+                ? "No additional recruiter instructions were provided."
+                : screeningPrompt) + """
 
-            Job Profile:
-            """ + toJson(job);
+        CANDIDATE PROFILE:
+        """ + toJson(candidate) + """
+
+        JOB PROFILE:
+        """ + toJson(job);
 
         Map<String, Object> body = Map.of(
                 "contents", new Object[]{

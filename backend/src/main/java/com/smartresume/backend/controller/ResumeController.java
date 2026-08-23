@@ -232,9 +232,15 @@ public class ResumeController {
                             request.get("job"),
                             JobProfile.class
                     );
+            String screeningPrompt =
+                    (String) request.get("screeningPrompt");
 
             return ResponseEntity.ok(
-                    llmService.matchCandidate(candidate, job)
+                    llmService.matchCandidate(
+                            candidate,
+                            job,
+                            screeningPrompt
+                    )
             );
 
         } catch (Exception e) {
