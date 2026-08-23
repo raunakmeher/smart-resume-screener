@@ -1,5 +1,7 @@
 package com.smartresume.backend.controller;
 
+import com.smartresume.backend.entity.Resume;
+import com.smartresume.backend.repository.ResumeRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,9 +12,13 @@ import com.smartresume.backend.service.ResumeParserService;
 @RequestMapping("/api/resumes")
 public class ResumeController {
     private final ResumeParserService resumeParserService;
+    private final ResumeRepository resumeRepository;
+    public ResumeController(
+            ResumeParserService resumeParserService,
+            ResumeRepository resumeRepository) {
 
-    public ResumeController(ResumeParserService resumeParserService) {
         this.resumeParserService = resumeParserService;
+        this.resumeRepository = resumeRepository;
     }
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadResume(
@@ -38,11 +44,16 @@ public class ResumeController {
                         .body(Map.of("error", "Could not extract text from resume"));
             }
 
+            Resume resume = new Resume(name, text);
+
+            Resume savedResume = resumeRepository.save(resume);
+
             return ResponseEntity.ok(
                     Map.of(
-                            "message", "Resume parsed successfully",
-                            "fileName", name,
-                            "text", text
+                            "message", "Resume uploaded and stored successfully",
+                            "resumeId", savedResume.getId(),
+                            "fileName", savedResume.getFileName(),
+                            "textLength", savedResume.getRawText().length()
                     )
             );
 
