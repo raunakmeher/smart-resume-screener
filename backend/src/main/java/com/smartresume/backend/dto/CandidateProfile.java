@@ -5,8 +5,8 @@ import java.util.List;
 public class CandidateProfile {
 
     private List<String> skills;
-    private List<String> experience;
-    private List<String> education;
+    private List<ExperienceItem> experience;
+    private List<EducationItem> education;
     private List<String> projects;
     private double totalExperienceYears;
 
@@ -18,19 +18,19 @@ public class CandidateProfile {
         this.skills = skills;
     }
 
-    public List<String> getExperience() {
+    public List<ExperienceItem> getExperience() {
         return experience;
     }
 
-    public void setExperience(List<String> experience) {
+    public void setExperience(List<ExperienceItem> experience) {
         this.experience = experience;
     }
 
-    public List<String> getEducation() {
+    public List<EducationItem> getEducation() {
         return education;
     }
 
-    public void setEducation(List<String> education) {
+    public void setEducation(List<EducationItem> education) {
         this.education = education;
     }
 

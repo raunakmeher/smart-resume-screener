@@ -1,5 +1,8 @@
 package com.smartresume.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartresume.backend.dto.CandidateProfile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -12,18 +15,20 @@ public class LLMService {
 
     private final RestClient client;
     private final String apiKey;
+    private final ObjectMapper objectMapper;
 
     public LLMService(
             @Value("${gemini.api.key}") String apiKey) {
 
         this.apiKey = apiKey;
+        this.objectMapper = new ObjectMapper();
 
         this.client = RestClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com")
                 .build();
     }
 
-    public String analyzeResume(String resumeText) {
+    public CandidateProfile analyzeResume(String resumeText) {
 
         String prompt = """
                 You are a resume information extraction system.
@@ -34,8 +39,20 @@ public class LLMService {
 
                 {
                   "skills": [],
-                  "experience": [],
-                  "education": [],
+                  "experience": [
+                    {
+                      "title": "",
+                      "company": "",
+                      "summary": ""
+                    }
+                  ],
+                  "education": [
+                    {
+                      "degree": "",
+                      "fieldOfStudy": "",
+                      "institution": ""
+                    }
+                  ],
                   "projects": [],
                   "totalExperienceYears": 0
                 }
@@ -61,11 +78,52 @@ public class LLMService {
                 }
         );
 
-        return client.post()
+        String response = client.post()
                 .uri("/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
                 .body(String.class);
+
+        try {
+            JsonNode root = objectMapper.readTree(response);
+
+            JsonNode parts = root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts");
+
+            String text = parts
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+            text = cleanJson(text);
+
+            return objectMapper.readValue(text, CandidateProfile.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse Gemini response", e
+            );
+        }
+    }
+
+    private String cleanJson(String text) {
+
+        text = text.trim();
+
+        if (text.startsWith("```json")) {
+            text = text.substring(7);
+        } else if (text.startsWith("```")) {
+            text = text.substring(3);
+        }
+
+        if (text.endsWith("```")) {
+            text = text.substring(0, text.length() - 3);
+        }
+
+        return text.trim();
     }
 }
