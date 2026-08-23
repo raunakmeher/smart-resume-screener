@@ -3,36 +3,53 @@ package com.smartresume.backend.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.io.IOException;
 import java.util.Map;
-
+import com.smartresume.backend.service.ResumeParserService;
 @RestController
 @RequestMapping("/api/resumes")
 public class ResumeController {
+    private final ResumeParserService resumeParserService;
 
+    public ResumeController(ResumeParserService resumeParserService) {
+        this.resumeParserService = resumeParserService;
+    }
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadResume(
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
-        if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Resume file is empty"));
+        try {
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Resume file is empty"));
+            }
+
+            String name = file.getOriginalFilename();
+
+            if (name == null || !name.toLowerCase().endsWith(".pdf")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Only PDF resumes are supported"));
+            }
+
+            String text = resumeParserService.extractText(file);
+
+            if (text.isBlank()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Could not extract text from resume"));
+            }
+
+            return ResponseEntity.ok(
+                    Map.of(
+                            "message", "Resume parsed successfully",
+                            "fileName", name,
+                            "text", text
+                    )
+            );
+
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Failed to read PDF"));
         }
-
-        String name = file.getOriginalFilename();
-
-        if (name == null || !name.toLowerCase().endsWith(".pdf")) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Only PDF resumes are supported"));
-        }
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "message", "Resume uploaded successfully",
-                        "fileName", name,
-                        "size", file.getSize()
-                )
-        );
     }
 
     @PostMapping("/text")
