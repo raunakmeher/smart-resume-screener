@@ -10,7 +10,7 @@ import com.smartresume.backend.service.ResumeParserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.smartresume.backend.dto.JobProfile;
 import java.io.IOException;
 import java.util.Map;
 
@@ -214,5 +214,38 @@ public class ResumeController {
                         text.length()
                 )
         );
+    }
+    @PostMapping("/test-match")
+    public ResponseEntity<?> testMatch(
+            @RequestBody Map<String, Object> request) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+
+            CandidateProfile candidate =
+                    objectMapper.convertValue(
+                            request.get("candidate"),
+                            CandidateProfile.class
+                    );
+
+            JobProfile job =
+                    objectMapper.convertValue(
+                            request.get("job"),
+                            JobProfile.class
+                    );
+
+            return ResponseEntity.ok(
+                    llmService.matchCandidate(candidate, job)
+            );
+
+        } catch (Exception e) {
+
+            return ResponseEntity.badRequest()
+                    .body(
+                            Map.of(
+                                    "error",
+                                    "Invalid candidate or job profile"
+                            )
+                    );
+        }
     }
 }

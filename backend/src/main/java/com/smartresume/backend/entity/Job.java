@@ -30,6 +30,8 @@ public class Job {
 
     @Column(columnDefinition = "TEXT")
     private String responsibilities;
+    @Column(columnDefinition = "TEXT")
+    private String screeningPrompt;
     private LocalDateTime createdAt;
 
     public Job() {
@@ -87,6 +89,9 @@ public class Job {
     public String getResponsibilities() {
         return responsibilities;
     }
+    public String getScreeningPrompt() {
+        return screeningPrompt;
+    }
     public void setRequiredSkills(String requiredSkills) {
         this.requiredSkills = requiredSkills;
     }
@@ -105,5 +110,8 @@ public class Job {
 
     public void setResponsibilities(String responsibilities) {
         this.responsibilities = responsibilities;
+    }
+    public void setScreeningPrompt(String screeningPrompt) {
+        this.screeningPrompt = screeningPrompt;
     }
 }

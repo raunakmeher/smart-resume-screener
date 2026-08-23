@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import com.smartresume.backend.dto.JobProfile;
 import java.util.Map;
+import com.smartresume.backend.dto.MatchResult;
 
 @Service
 public class LLMService {
@@ -195,5 +196,94 @@ public class LLMService {
         }
 
         return text.trim();
+    }
+    public MatchResult matchCandidate(
+            CandidateProfile candidate,
+            JobProfile job) {
+
+        String prompt = """
+            You are an AI recruitment matching system.
+
+            Compare the candidate profile against the job requirements.
+
+            Return ONLY valid JSON in this exact structure:
+
+            {
+              "matchScore": 0,
+              "matchedSkills": [],
+              "missingRequiredSkills": [],
+              "preferredSkillsMatched": [],
+              "experienceFit": false,
+              "educationFit": false,
+              "summary": ""
+            }
+
+            Scoring rules:
+            - matchScore must be between 0 and 100.
+            - Required skills are more important than preferred skills.
+            - Consider semantic equivalents of skills.
+              For example, "Spring" and "Spring Framework" may be equivalent.
+            - Do not assume a skill exists unless supported by the candidate profile.
+            - Experience fit is true only when the candidate meets or exceeds
+              the minimum required experience.
+            - Education fit should be based only on the stated education.
+            - Do not use name, age, gender, photo, address, phone number,
+              email, nationality or other personal characteristics.
+            - Give a concise factual summary explaining the score.
+
+            Candidate Profile:
+            """ + toJson(candidate) + """
+
+            Job Profile:
+            """ + toJson(job);
+
+        Map<String, Object> body = Map.of(
+                "contents", new Object[]{
+                        Map.of(
+                                "parts", new Object[]{
+                                        Map.of("text", prompt)
+                                }
+                        )
+                }
+        );
+
+        String response = client.post()
+                .uri("/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+
+        try {
+            JsonNode root = objectMapper.readTree(response);
+
+            String text = root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+            text = cleanJson(text);
+
+            return objectMapper.readValue(text, MatchResult.class);
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse Gemini match response", e
+            );
+        }
+    }
+    private String toJson(Object object) {
+
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to convert object to JSON", e
+            );
+        }
     }
 }
