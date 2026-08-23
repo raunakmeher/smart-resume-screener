@@ -17,6 +17,19 @@ public class Job {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
+    @Column(columnDefinition = "TEXT")
+    private String requiredSkills;
+
+    @Column(columnDefinition = "TEXT")
+    private String preferredSkills;
+
+    private Double minimumExperienceYears;
+
+    @Column(columnDefinition = "TEXT")
+    private String education;
+
+    @Column(columnDefinition = "TEXT")
+    private String responsibilities;
     private LocalDateTime createdAt;
 
     public Job() {
@@ -54,5 +67,43 @@ public class Job {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+    public String getRequiredSkills() {
+        return requiredSkills;
+    }
+
+    public String getPreferredSkills() {
+        return preferredSkills;
+    }
+
+    public Double getMinimumExperienceYears() {
+        return minimumExperienceYears;
+    }
+
+    public String getEducation() {
+        return education;
+    }
+
+    public String getResponsibilities() {
+        return responsibilities;
+    }
+    public void setRequiredSkills(String requiredSkills) {
+        this.requiredSkills = requiredSkills;
+    }
+
+    public void setPreferredSkills(String preferredSkills) {
+        this.preferredSkills = preferredSkills;
+    }
+
+    public void setMinimumExperienceYears(Double minimumExperienceYears) {
+        this.minimumExperienceYears = minimumExperienceYears;
+    }
+
+    public void setEducation(String education) {
+        this.education = education;
+    }
+
+    public void setResponsibilities(String responsibilities) {
+        this.responsibilities = responsibilities;
     }
 }
