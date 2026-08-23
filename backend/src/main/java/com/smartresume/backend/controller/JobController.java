@@ -10,15 +10,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
+import com.smartresume.backend.service.LLMService;
 @RestController
 @RequestMapping("/api/jobs")
 public class JobController {
 
     private final JobRepository jobRepository;
+    private final LLMService llmService;
+    public JobController(
+            JobRepository jobRepository,
+            LLMService llmService) {
 
-    public JobController(JobRepository jobRepository) {
         this.jobRepository = jobRepository;
+        this.llmService = llmService;
     }
 
     @PostMapping
@@ -38,6 +42,21 @@ public class JobController {
                         "jobId", savedJob.getId(),
                         "title", savedJob.getTitle()
                 )
+        );
+    }
+    @PostMapping("/test-ai")
+    public ResponseEntity<?> testAi(
+            @RequestBody Map<String, String> request) {
+
+        String description = request.get("description");
+
+        if (description == null || description.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Job description is required"));
+        }
+
+        return ResponseEntity.ok(
+                llmService.analyzeJob(description)
         );
     }
 
