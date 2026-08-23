@@ -17,6 +17,7 @@ import com.smartresume.backend.service.LLMService;
 import com.smartresume.backend.service.ScoringService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.smartresume.backend.entity.ScreeningResult;
 
 import java.util.List;
 import java.util.Map;
@@ -194,12 +195,83 @@ public class ScreeningController {
 
 
             ScoringResult scoring =
+
                     scoringService.calculate(
                             filteredCandidate,
                             jobProfile,
                             match
                     );
 
+            ScreeningResult result =
+                    screeningResultRepository
+                            .findByResumeIdAndJobId(resumeId, jobId)
+                            .orElse(new ScreeningResult());
+
+            result.setResumeId(resumeId);
+            result.setJobId(jobId);
+
+            result.setMatchScore(
+                    match.getMatchScore()
+            );
+
+            result.setExperienceFit(
+                    match.isExperienceFit()
+            );
+
+            result.setEducationFit(
+                    match.isEducationFit()
+            );
+            result.setSummary(
+                    match.getSummary()
+            );
+
+            result.setMatchedSkills(
+                    objectMapper.writeValueAsString(
+                            match.getMatchedSkills()
+                    )
+            );
+
+            result.setMissingRequiredSkills(
+                    objectMapper.writeValueAsString(
+                            match.getMissingRequiredSkills()
+                    )
+            );
+
+            result.setPreferredSkillsMatched(
+                    objectMapper.writeValueAsString(
+                            match.getPreferredSkillsMatched()
+                    )
+            );
+
+            result.setRequiredSkillScore(
+                    scoring.getRequiredSkillScore()
+            );
+
+            result.setSemanticScore(
+                    scoring.getSemanticScore()
+            );
+
+            result.setExperienceScore(
+                    scoring.getExperienceScore()
+            );
+
+            result.setPreferredSkillScore(
+                    scoring.getPreferredSkillScore()
+            );
+
+            result.setFinalScore(
+                    scoring.getFinalScore()
+            );
+
+            System.out.println("BEFORE SAVE");
+            System.out.println("Resume ID: " + result.getResumeId());
+            System.out.println("Job ID: " + result.getJobId());
+            System.out.println("Final Score: " + result.getFinalScore());
+
+            screeningResultRepository.save(result);
+
+            System.out.println("AFTER SAVE");
+            System.out.println("Saved Result ID: " + result.getId());
 
             return ResponseEntity.ok(
                     Map.of(

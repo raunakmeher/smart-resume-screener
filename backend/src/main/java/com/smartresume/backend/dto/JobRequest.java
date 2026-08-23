@@ -10,6 +10,8 @@ public class JobRequest {
     @NotBlank(message = "Job description is required")
     private String description;
 
+    private String screeningPrompt;
+
     public String getTitle() {
         return title;
     }
@@ -24,5 +26,13 @@ public class JobRequest {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getScreeningPrompt() {
+        return screeningPrompt;
+    }
+
+    public void setScreeningPrompt(String screeningPrompt) {
+        this.screeningPrompt = screeningPrompt;
     }
 }

@@ -36,6 +36,10 @@ public class JobController {
                 request.getDescription()
         );
 
+        job.setScreeningPrompt(
+                request.getScreeningPrompt()
+        );
+
         Job savedJob = jobRepository.save(job);
 
         return ResponseEntity.ok(
@@ -148,7 +152,8 @@ public class JobController {
                         Map.of(
                                 "id", job.getId(),
                                 "title", job.getTitle(),
-                                "description", job.getDescription()
+                                "description", job.getDescription(),
+                                "screeningPrompt", job.getScreeningPrompt()
                         )
                 ))
                 .orElseGet(() ->
