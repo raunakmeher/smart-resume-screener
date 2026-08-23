@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import com.smartresume.backend.service.LLMService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartresume.backend.dto.JobProfile;
 @RestController
 @RequestMapping("/api/jobs")
 public class JobController {
@@ -60,6 +62,84 @@ public class JobController {
         );
     }
 
+    @PostMapping("/{id}/analyze")
+    public ResponseEntity<?> analyzeJob(
+            @PathVariable Long id) {
+
+        try {
+            return jobRepository.findById(id)
+                    .map(job -> {
+
+                        JobProfile profile =
+                                llmService.analyzeJob(
+                                        job.getDescription()
+                                );
+
+                        try {
+                            ObjectMapper objectMapper =
+                                    new ObjectMapper();
+
+                            job.setRequiredSkills(
+                                    objectMapper.writeValueAsString(
+                                            profile.getRequiredSkills()
+                                    )
+                            );
+
+                            job.setPreferredSkills(
+                                    objectMapper.writeValueAsString(
+                                            profile.getPreferredSkills()
+                                    )
+                            );
+
+                            job.setMinimumExperienceYears(
+                                    profile.getMinimumExperienceYears()
+                            );
+
+                            job.setEducation(
+                                    profile.getEducation()
+                            );
+
+                            job.setResponsibilities(
+                                    objectMapper.writeValueAsString(
+                                            profile.getResponsibilities()
+                                    )
+                            );
+
+                            Job saved =
+                                    jobRepository.save(job);
+
+                            return ResponseEntity.ok(
+                                    Map.of(
+                                            "message",
+                                            "Job analyzed successfully",
+                                            "jobId",
+                                            saved.getId(),
+                                            "profile",
+                                            profile
+                                    )
+                            );
+
+                        } catch (Exception e) {
+                            throw new RuntimeException(
+                                    "Failed to save job profile",
+                                    e
+                            );
+                        }
+                    })
+                    .orElseGet(() ->
+                            ResponseEntity.notFound().build()
+                    );
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(
+                            Map.of(
+                                    "error",
+                                    "Job analysis failed"
+                            )
+                    );
+        }
+    }
     @GetMapping("/{id}")
     public ResponseEntity<?> getJob(@PathVariable Long id) {
 
