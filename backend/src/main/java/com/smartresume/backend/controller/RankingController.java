@@ -29,7 +29,10 @@ public class RankingController {
 
     @GetMapping("/job/{jobId}")
     public ResponseEntity<?> rankCandidates(
-            @PathVariable Long jobId) {
+            @PathVariable Long jobId,
+            @RequestParam(
+                    defaultValue = "70"
+            ) double threshold) {
 
         try {
 
@@ -56,6 +59,10 @@ public class RankingController {
                 candidate.put(
                         "finalScore",
                         result.getFinalScore()
+                );
+                candidate.put(
+                        "shortlisted",
+                        result.getFinalScore() >= threshold
                 );
                 candidate.put(
                         "semanticScore",
