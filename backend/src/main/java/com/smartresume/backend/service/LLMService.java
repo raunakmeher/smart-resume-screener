@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import com.smartresume.backend.dto.JobProfile;
 import java.util.Map;
 import com.smartresume.backend.dto.MatchResult;
+import com.smartresume.backend.dto.SkillGapResult;
 
 @Service
 public class LLMService {
@@ -255,7 +256,7 @@ public class LLMService {
         );
 
         String response = client.post()
-                .uri("/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey)
+                .uri("/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()
@@ -290,6 +291,88 @@ public class LLMService {
         } catch (Exception e) {
             throw new RuntimeException(
                     "Failed to convert object to JSON", e
+            );
+        }
+    }
+    public SkillGapResult analyzeSkillGap(
+            CandidateProfile candidate,
+            JobProfile job) {
+
+        String prompt = """
+            You are a career skill-gap analysis system.
+
+            Compare the candidate profile with the job profile.
+
+            Identify:
+            1. Missing required skills.
+            2. Missing preferred skills.
+            3. Skills the candidate already has.
+            4. Any experience gap.
+            5. Practical recommendations for closing the gaps.
+
+            Return ONLY valid JSON:
+
+            {
+              "missingRequiredSkills": [],
+              "missingPreferredSkills": [],
+              "matchedSkills": [],
+              "experienceGap": "",
+              "recommendations": []
+            }
+
+            Rules:
+            - Do not invent candidate skills.
+            - Consider reasonable semantic equivalents.
+            - Required skills have higher priority than preferred skills.
+            - Recommendations must be based on actual missing skills.
+            - Keep recommendations concise.
+
+            Candidate Profile:
+            """ + toJson(candidate) + """
+
+            Job Profile:
+            """ + toJson(job);
+
+        Map<String, Object> body = Map.of(
+                "contents", new Object[]{
+                        Map.of(
+                                "parts", new Object[]{
+                                        Map.of("text", prompt)
+                                }
+                        )
+                }
+        );
+
+        String response = client.post()
+                .uri("/v1beta/models/gemini-3.6-flash:generateContent?key=" + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+
+        try {
+            JsonNode root = objectMapper.readTree(response);
+
+            String text = root
+                    .path("candidates")
+                    .get(0)
+                    .path("content")
+                    .path("parts")
+                    .get(0)
+                    .path("text")
+                    .asText();
+
+            text = cleanJson(text);
+
+            return objectMapper.readValue(
+                    text,
+                    SkillGapResult.class
+            );
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to parse skill gap response",
+                    e
             );
         }
     }

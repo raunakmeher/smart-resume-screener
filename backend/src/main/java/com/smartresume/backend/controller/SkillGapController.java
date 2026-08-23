@@ -3,50 +3,40 @@ package com.smartresume.backend.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartresume.backend.dto.CandidateProfile;
 import com.smartresume.backend.dto.JobProfile;
-import com.smartresume.backend.dto.MatchResult;
+import com.smartresume.backend.dto.SkillGapResult;
 import com.smartresume.backend.entity.Job;
 import com.smartresume.backend.entity.Resume;
-import com.smartresume.backend.entity.ScreeningResult;
 import com.smartresume.backend.repository.JobRepository;
 import com.smartresume.backend.repository.ResumeRepository;
-import com.smartresume.backend.repository.ScreeningResultRepository;
 import com.smartresume.backend.service.LLMService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
-import com.smartresume.backend.service.ScoringService;
-import com.smartresume.backend.dto.ScoringResult;
+
 @RestController
-@RequestMapping("/api/screening")
-public class ScreeningController {
+@RequestMapping("/api/skill-gap")
+public class SkillGapController {
 
     private final ResumeRepository resumeRepository;
     private final JobRepository jobRepository;
-    private final ScreeningResultRepository screeningResultRepository;
     private final LLMService llmService;
     private final ObjectMapper objectMapper;
-    private final ScoringService scoringService;
-    public ScreeningController(
+
+    public SkillGapController(
             ResumeRepository resumeRepository,
             JobRepository jobRepository,
-            ScreeningResultRepository screeningResultRepository,
-            LLMService llmService,
-            ScoringService scoringService) {
+            LLMService llmService) {
 
         this.resumeRepository = resumeRepository;
         this.jobRepository = jobRepository;
-        this.screeningResultRepository =
-                screeningResultRepository;
         this.llmService = llmService;
-        this.scoringService = scoringService;
         this.objectMapper = new ObjectMapper();
     }
 
-    @PostMapping(
-            "/resume/{resumeId}/job/{jobId}"
-    )
-    public ResponseEntity<?> screenCandidate(
+    @PostMapping("/resume/{resumeId}/job/{jobId}")
+    public ResponseEntity<?> analyzeSkillGap(
             @PathVariable Long resumeId,
             @PathVariable Long jobId) {
 
@@ -76,7 +66,7 @@ public class ScreeningController {
                             resume.getSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -87,7 +77,7 @@ public class ScreeningController {
                             resume.getExperience(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             com.smartresume.backend.dto.ExperienceItem.class
                                     )
                     )
@@ -98,7 +88,7 @@ public class ScreeningController {
                             resume.getEducation(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             com.smartresume.backend.dto.EducationItem.class
                                     )
                     )
@@ -109,7 +99,7 @@ public class ScreeningController {
                             resume.getProjects(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -119,14 +109,15 @@ public class ScreeningController {
                     resume.getTotalExperienceYears()
             );
 
-            JobProfile jobProfile = new JobProfile();
+            JobProfile jobProfile =
+                    new JobProfile();
 
             jobProfile.setRequiredSkills(
                     objectMapper.readValue(
                             job.getRequiredSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -137,7 +128,7 @@ public class ScreeningController {
                             job.getPreferredSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -156,103 +147,26 @@ public class ScreeningController {
                             job.getResponsibilities(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
             );
 
-            MatchResult match =
-                    llmService.matchCandidate(
+            SkillGapResult result =
+                    llmService.analyzeSkillGap(
                             candidate,
-                            jobProfile,
-                            job.getScreeningPrompt()
+                            jobProfile
                     );
-            ScoringResult scoring =
-                    scoringService.calculate(
-                            candidate,
-                            jobProfile,
-                            match
-                    );
-
-            ScreeningResult result =
-                    screeningResultRepository
-                            .findByResumeIdAndJobId(
-                                    resumeId,
-                                    jobId
-                            )
-                            .orElse(new ScreeningResult());
-
-            result.setResumeId(resumeId);
-            result.setJobId(jobId);
-            result.setMatchScore(
-                    match.getMatchScore()
-            );
-            result.setRequiredSkillScore(
-                    scoring.getRequiredSkillScore()
-            );
-
-            result.setSemanticScore(
-                    scoring.getSemanticScore()
-            );
-
-            result.setExperienceScore(
-                    scoring.getExperienceScore()
-            );
-
-            result.setPreferredSkillScore(
-                    scoring.getPreferredSkillScore()
-            );
-
-            result.setFinalScore(
-                    scoring.getFinalScore()
-            );
-
-            result.setMatchedSkills(
-                    objectMapper.writeValueAsString(
-                            match.getMatchedSkills()
-                    )
-            );
-
-            result.setMissingRequiredSkills(
-                    objectMapper.writeValueAsString(
-                            match.getMissingRequiredSkills()
-                    )
-            );
-
-            result.setPreferredSkillsMatched(
-                    objectMapper.writeValueAsString(
-                            match.getPreferredSkillsMatched()
-                    )
-            );
-
-            result.setExperienceFit(
-                    match.isExperienceFit()
-            );
-
-            result.setEducationFit(
-                    match.isEducationFit()
-            );
-
-            result.setSummary(
-                    match.getSummary()
-            );
-
-            ScreeningResult saved =
-                    screeningResultRepository.save(result);
 
             return ResponseEntity.ok(
                     Map.of(
-                            "screeningId",
-                            saved.getId(),
                             "resumeId",
                             resumeId,
                             "jobId",
                             jobId,
-                            "match",
-                            match,
-                            "scoring",
-                            scoring
+                            "skillGap",
+                            result
                     )
             );
 
@@ -262,43 +176,9 @@ public class ScreeningController {
                     .body(
                             Map.of(
                                     "error",
-                                    "Candidate screening failed"
-                            )
-                    );
-        }
-    }
-    @PostMapping("/test-skill-gap")
-    public ResponseEntity<?> testSkillGap(
-            @RequestBody Map<String, Object> request) {
-
-        try {
-
-            CandidateProfile candidate =
-                    objectMapper.convertValue(
-                            request.get("candidate"),
-                            CandidateProfile.class
-                    );
-
-            JobProfile job =
-                    objectMapper.convertValue(
-                            request.get("job"),
-                            JobProfile.class
-                    );
-
-            return ResponseEntity.ok(
-                    llmService.analyzeSkillGap(
-                            candidate,
-                            job
-                    )
-            );
-
-        } catch (Exception e) {
-
-            return ResponseEntity.badRequest()
-                    .body(
-                            Map.of(
-                                    "error",
-                                    "Invalid candidate or job profile"
+                                    e.getMessage() == null
+                                            ? e.getClass().getSimpleName()
+                                            : e.getMessage()
                             )
                     );
         }
