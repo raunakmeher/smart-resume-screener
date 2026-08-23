@@ -108,9 +108,18 @@ public class ScoringService {
         Set<String> result = new HashSet<>();
 
         for (String skill : skills) {
-            result.add(
-                    skill.trim().toLowerCase()
-            );
+
+            String s = skill
+                    .trim()
+                    .toLowerCase();
+
+            s = s.replaceAll("[^a-z0-9+#. ]", "");
+
+            s = s.replaceAll("\\bapis\\b", "api");
+
+            s = s.replaceAll("\\s+", " ").trim();
+
+            result.add(s);
         }
 
         return result;

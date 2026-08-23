@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-
+import com.smartresume.backend.service.BiasFilterService;
 @RestController
 @RequestMapping("/api/skill-gap")
 public class SkillGapController {
@@ -23,16 +23,20 @@ public class SkillGapController {
     private final JobRepository jobRepository;
     private final LLMService llmService;
     private final ObjectMapper objectMapper;
-
+    private final BiasFilterService biasFilterService;
     public SkillGapController(
             ResumeRepository resumeRepository,
             JobRepository jobRepository,
-            LLMService llmService) {
+            LLMService llmService,
+
+            BiasFilterService biasFilterService) {
 
         this.resumeRepository = resumeRepository;
         this.jobRepository = jobRepository;
         this.llmService = llmService;
         this.objectMapper = new ObjectMapper();
+        this.biasFilterService =
+                biasFilterService;
     }
 
     @PostMapping("/resume/{resumeId}/job/{jobId}")
@@ -153,9 +157,12 @@ public class SkillGapController {
                     )
             );
 
+            CandidateProfile filteredCandidate =
+                    biasFilterService.filter(candidate);
+
             SkillGapResult result =
                     llmService.analyzeSkillGap(
-                            candidate,
+                            filteredCandidate,
                             jobProfile
                     );
 
@@ -174,11 +181,10 @@ public class SkillGapController {
 
             return ResponseEntity.internalServerError()
                     .body(
-                            Map.of(
-                                    "error",
-                                    e.getMessage() == null
-                                            ? e.getClass().getSimpleName()
-                                            : e.getMessage()
+                            Map.of("error",
+                                    "Skill gap analysis failed",
+                                    "details",
+                                    e.getMessage()
                             )
                     );
         }

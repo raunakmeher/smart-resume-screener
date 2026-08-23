@@ -256,7 +256,7 @@ public class LLMService {
         );
 
         String response = client.post()
-                .uri("/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + apiKey)
+                .uri("/v1beta/models/gemini-3.5-flash-lite:generateContent?key=" + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
                 .retrieve()

@@ -2,37 +2,44 @@ package com.smartresume.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartresume.backend.dto.CandidateProfile;
+import com.smartresume.backend.dto.EducationItem;
+import com.smartresume.backend.dto.ExperienceItem;
 import com.smartresume.backend.dto.JobProfile;
 import com.smartresume.backend.dto.MatchResult;
+import com.smartresume.backend.dto.ScoringResult;
 import com.smartresume.backend.entity.Job;
 import com.smartresume.backend.entity.Resume;
-import com.smartresume.backend.entity.ScreeningResult;
 import com.smartresume.backend.repository.JobRepository;
 import com.smartresume.backend.repository.ResumeRepository;
 import com.smartresume.backend.repository.ScreeningResultRepository;
+import com.smartresume.backend.service.BiasFilterService;
 import com.smartresume.backend.service.LLMService;
+import com.smartresume.backend.service.ScoringService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
-import com.smartresume.backend.service.ScoringService;
-import com.smartresume.backend.dto.ScoringResult;
+
 @RestController
 @RequestMapping("/api/screening")
 public class ScreeningController {
 
+    private final BiasFilterService biasFilterService;
     private final ResumeRepository resumeRepository;
     private final JobRepository jobRepository;
     private final ScreeningResultRepository screeningResultRepository;
     private final LLMService llmService;
     private final ObjectMapper objectMapper;
     private final ScoringService scoringService;
+
     public ScreeningController(
             ResumeRepository resumeRepository,
             JobRepository jobRepository,
             ScreeningResultRepository screeningResultRepository,
             LLMService llmService,
-            ScoringService scoringService) {
+            ScoringService scoringService,
+            BiasFilterService biasFilterService) {
 
         this.resumeRepository = resumeRepository;
         this.jobRepository = jobRepository;
@@ -40,17 +47,18 @@ public class ScreeningController {
                 screeningResultRepository;
         this.llmService = llmService;
         this.scoringService = scoringService;
+        this.biasFilterService = biasFilterService;
         this.objectMapper = new ObjectMapper();
     }
 
-    @PostMapping(
-            "/resume/{resumeId}/job/{jobId}"
-    )
+    @PostMapping("/resume/{resumeId}/job/{jobId}")
     public ResponseEntity<?> screenCandidate(
             @PathVariable Long resumeId,
             @PathVariable Long jobId) {
 
         try {
+
+
 
             Resume resume = resumeRepository
                     .findById(resumeId)
@@ -60,6 +68,8 @@ public class ScreeningController {
                 return ResponseEntity.notFound().build();
             }
 
+
+
             Job job = jobRepository
                     .findById(jobId)
                     .orElse(null);
@@ -67,6 +77,8 @@ public class ScreeningController {
             if (job == null) {
                 return ResponseEntity.notFound().build();
             }
+
+
 
             CandidateProfile candidate =
                     new CandidateProfile();
@@ -76,7 +88,7 @@ public class ScreeningController {
                             resume.getSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -87,8 +99,8 @@ public class ScreeningController {
                             resume.getExperience(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
-                                            com.smartresume.backend.dto.ExperienceItem.class
+                                            List.class,
+                                            ExperienceItem.class
                                     )
                     )
             );
@@ -98,8 +110,8 @@ public class ScreeningController {
                             resume.getEducation(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
-                                            com.smartresume.backend.dto.EducationItem.class
+                                            List.class,
+                                            EducationItem.class
                                     )
                     )
             );
@@ -109,7 +121,7 @@ public class ScreeningController {
                             resume.getProjects(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -119,14 +131,19 @@ public class ScreeningController {
                     resume.getTotalExperienceYears()
             );
 
-            JobProfile jobProfile = new JobProfile();
+            System.out.println(
+
+            );
+
+            JobProfile jobProfile =
+                    new JobProfile();
 
             jobProfile.setRequiredSkills(
                     objectMapper.readValue(
                             job.getRequiredSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -137,7 +154,7 @@ public class ScreeningController {
                             job.getPreferredSkills(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
@@ -156,95 +173,36 @@ public class ScreeningController {
                             job.getResponsibilities(),
                             objectMapper.getTypeFactory()
                                     .constructCollectionType(
-                                            java.util.List.class,
+                                            List.class,
                                             String.class
                                     )
                     )
             );
 
+
+
+            CandidateProfile filteredCandidate =
+                    biasFilterService.filter(candidate);
+
+
             MatchResult match =
                     llmService.matchCandidate(
-                            candidate,
+                            filteredCandidate,
                             jobProfile,
                             job.getScreeningPrompt()
                     );
+
+
             ScoringResult scoring =
                     scoringService.calculate(
-                            candidate,
+                            filteredCandidate,
                             jobProfile,
                             match
                     );
 
-            ScreeningResult result =
-                    screeningResultRepository
-                            .findByResumeIdAndJobId(
-                                    resumeId,
-                                    jobId
-                            )
-                            .orElse(new ScreeningResult());
-
-            result.setResumeId(resumeId);
-            result.setJobId(jobId);
-            result.setMatchScore(
-                    match.getMatchScore()
-            );
-            result.setRequiredSkillScore(
-                    scoring.getRequiredSkillScore()
-            );
-
-            result.setSemanticScore(
-                    scoring.getSemanticScore()
-            );
-
-            result.setExperienceScore(
-                    scoring.getExperienceScore()
-            );
-
-            result.setPreferredSkillScore(
-                    scoring.getPreferredSkillScore()
-            );
-
-            result.setFinalScore(
-                    scoring.getFinalScore()
-            );
-
-            result.setMatchedSkills(
-                    objectMapper.writeValueAsString(
-                            match.getMatchedSkills()
-                    )
-            );
-
-            result.setMissingRequiredSkills(
-                    objectMapper.writeValueAsString(
-                            match.getMissingRequiredSkills()
-                    )
-            );
-
-            result.setPreferredSkillsMatched(
-                    objectMapper.writeValueAsString(
-                            match.getPreferredSkillsMatched()
-                    )
-            );
-
-            result.setExperienceFit(
-                    match.isExperienceFit()
-            );
-
-            result.setEducationFit(
-                    match.isEducationFit()
-            );
-
-            result.setSummary(
-                    match.getSummary()
-            );
-
-            ScreeningResult saved =
-                    screeningResultRepository.save(result);
 
             return ResponseEntity.ok(
                     Map.of(
-                            "screeningId",
-                            saved.getId(),
                             "resumeId",
                             resumeId,
                             "jobId",
@@ -258,15 +216,21 @@ public class ScreeningController {
 
         } catch (Exception e) {
 
-            return ResponseEntity.internalServerError()
+            e.printStackTrace();
+
+            return ResponseEntity
+                    .internalServerError()
                     .body(
                             Map.of(
                                     "error",
-                                    "Candidate screening failed"
+                                    "Candidate screening failed",
+                                    "details",
+                                    e.toString()
                             )
                     );
         }
     }
+
     @PostMapping("/test-skill-gap")
     public ResponseEntity<?> testSkillGap(
             @RequestBody Map<String, Object> request) {
@@ -293,6 +257,8 @@ public class ScreeningController {
             );
 
         } catch (Exception e) {
+
+
 
             return ResponseEntity.badRequest()
                     .body(
