@@ -9,8 +9,12 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import com.smartresume.backend.service.LLMService;
+import com.smartresume.backend.service.ProfileAssembler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartresume.backend.dto.JobProfile;
 @RestController
@@ -19,12 +23,15 @@ public class JobController {
 
     private final JobRepository jobRepository;
     private final LLMService llmService;
+    private final ProfileAssembler profileAssembler;
     public JobController(
             JobRepository jobRepository,
-            LLMService llmService) {
+            LLMService llmService,
+            ProfileAssembler profileAssembler) {
 
         this.jobRepository = jobRepository;
         this.llmService = llmService;
+        this.profileAssembler = profileAssembler;
     }
 
     @PostMapping
@@ -144,18 +151,65 @@ public class JobController {
                     );
         }
     }
+    @GetMapping
+    public ResponseEntity<?> listJobs() {
+
+        List<Map<String, Object>> jobs =
+                new ArrayList<>();
+
+        for (Job job :
+                jobRepository.findAllByOrderByCreatedAtDesc()) {
+
+            Map<String, Object> summary =
+                    new LinkedHashMap<>();
+
+            summary.put("id", job.getId());
+            summary.put("title", job.getTitle());
+            summary.put(
+                    "analyzed",
+                    profileAssembler.isAnalyzed(job)
+            );
+            summary.put(
+                    "hasScreeningPrompt",
+                    job.getScreeningPrompt() != null
+                            && !job.getScreeningPrompt().isBlank()
+            );
+            summary.put("createdAt", job.getCreatedAt());
+
+            jobs.add(summary);
+        }
+
+        return ResponseEntity.ok(jobs);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getJob(@PathVariable Long id) {
 
         return jobRepository.findById(id)
-                .map(job -> ResponseEntity.ok(
-                        Map.of(
-                                "id", job.getId(),
-                                "title", job.getTitle(),
-                                "description", job.getDescription(),
-                                "screeningPrompt", job.getScreeningPrompt()
-                        )
-                ))
+                .<ResponseEntity<?>>map(job -> {
+
+                    Map<String, Object> body =
+                            new LinkedHashMap<>();
+
+                    body.put("id", job.getId());
+                    body.put("title", job.getTitle());
+                    body.put("description", job.getDescription());
+                    body.put(
+                            "screeningPrompt",
+                            job.getScreeningPrompt()
+                    );
+                    body.put(
+                            "analyzed",
+                            profileAssembler.isAnalyzed(job)
+                    );
+                    body.put(
+                            "profile",
+                            profileAssembler.toJobProfile(job)
+                    );
+                    body.put("createdAt", job.getCreatedAt());
+
+                    return ResponseEntity.ok(body);
+                })
                 .orElseGet(() ->
                         ResponseEntity.notFound().build()
                 );

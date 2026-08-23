@@ -5,6 +5,7 @@ import com.smartresume.backend.dto.CandidateProfile;
 import com.smartresume.backend.entity.Resume;
 import com.smartresume.backend.repository.ResumeRepository;
 import com.smartresume.backend.service.LLMService;
+import com.smartresume.backend.service.ProfileAssembler;
 import com.smartresume.backend.service.ResumeParserService;
 
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.smartresume.backend.dto.JobProfile;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,16 +25,83 @@ public class ResumeController {
     private final ResumeParserService resumeParserService;
     private final ResumeRepository resumeRepository;
     private final LLMService llmService;
+    private final ProfileAssembler profileAssembler;
 
 
     public ResumeController(
             ResumeParserService resumeParserService,
             ResumeRepository resumeRepository,
-            LLMService llmService) {
+            LLMService llmService,
+            ProfileAssembler profileAssembler) {
 
         this.resumeParserService = resumeParserService;
         this.resumeRepository = resumeRepository;
         this.llmService = llmService;
+        this.profileAssembler = profileAssembler;
+    }
+
+    @GetMapping
+    public ResponseEntity<?> listResumes() {
+
+        List<Map<String, Object>> resumes =
+                new ArrayList<>();
+
+        for (Resume resume :
+                resumeRepository.findAllByOrderByCreatedAtDesc()) {
+
+            Map<String, Object> summary =
+                    new LinkedHashMap<>();
+
+            summary.put("id", resume.getId());
+            summary.put("fileName", resume.getFileName());
+            summary.put(
+                    "analyzed",
+                    profileAssembler.isAnalyzed(resume)
+            );
+            summary.put(
+                    "totalExperienceYears",
+                    resume.getTotalExperienceYears()
+            );
+            summary.put("createdAt", resume.getCreatedAt());
+
+            resumes.add(summary);
+        }
+
+        return ResponseEntity.ok(resumes);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getResume(@PathVariable Long id) {
+
+        return resumeRepository.findById(id)
+                .<ResponseEntity<?>>map(resume -> {
+
+                    Map<String, Object> body =
+                            new LinkedHashMap<>();
+
+                    body.put("id", resume.getId());
+                    body.put("fileName", resume.getFileName());
+                    body.put(
+                            "textLength",
+                            resume.getRawText() == null
+                                    ? 0
+                                    : resume.getRawText().length()
+                    );
+                    body.put(
+                            "analyzed",
+                            profileAssembler.isAnalyzed(resume)
+                    );
+                    body.put("createdAt", resume.getCreatedAt());
+                    body.put(
+                            "profile",
+                            profileAssembler.toCandidateProfile(resume)
+                    );
+
+                    return ResponseEntity.ok(body);
+                })
+                .orElseGet(() ->
+                        ResponseEntity.notFound().build()
+                );
     }
 
     @PostMapping("/test-ai")

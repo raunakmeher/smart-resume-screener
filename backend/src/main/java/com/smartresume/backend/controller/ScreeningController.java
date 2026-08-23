@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.smartresume.backend.entity.ScreeningResult;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -300,6 +301,108 @@ public class ScreeningController {
                                     e.toString()
                             )
                     );
+        }
+    }
+
+    @GetMapping("/resume/{resumeId}/job/{jobId}")
+    public ResponseEntity<?> storedScreening(
+            @PathVariable Long resumeId,
+            @PathVariable Long jobId) {
+
+        return screeningResultRepository
+                .findByResumeIdAndJobId(resumeId, jobId)
+                .<ResponseEntity<?>>map(stored -> {
+
+                    Map<String, Object> match =
+                            new LinkedHashMap<>();
+
+                    match.put(
+                            "matchScore",
+                            stored.getMatchScore()
+                    );
+                    match.put(
+                            "matchedSkills",
+                            readSkills(stored.getMatchedSkills())
+                    );
+                    match.put(
+                            "missingRequiredSkills",
+                            readSkills(stored.getMissingRequiredSkills())
+                    );
+                    match.put(
+                            "preferredSkillsMatched",
+                            readSkills(stored.getPreferredSkillsMatched())
+                    );
+                    match.put(
+                            "experienceFit",
+                            stored.getExperienceFit()
+                    );
+                    match.put(
+                            "educationFit",
+                            stored.getEducationFit()
+                    );
+                    match.put(
+                            "summary",
+                            stored.getSummary()
+                    );
+
+                    Map<String, Object> scoring =
+                            new LinkedHashMap<>();
+
+                    scoring.put(
+                            "requiredSkillScore",
+                            stored.getRequiredSkillScore()
+                    );
+                    scoring.put(
+                            "semanticScore",
+                            stored.getSemanticScore()
+                    );
+                    scoring.put(
+                            "experienceScore",
+                            stored.getExperienceScore()
+                    );
+                    scoring.put(
+                            "preferredSkillScore",
+                            stored.getPreferredSkillScore()
+                    );
+                    scoring.put(
+                            "finalScore",
+                            stored.getFinalScore()
+                    );
+
+                    Map<String, Object> body =
+                            new LinkedHashMap<>();
+
+                    body.put("resumeId", stored.getResumeId());
+                    body.put("jobId", stored.getJobId());
+                    body.put("match", match);
+                    body.put("scoring", scoring);
+                    body.put("createdAt", stored.getCreatedAt());
+
+                    return ResponseEntity.ok(body);
+                })
+                .orElseGet(() ->
+                        ResponseEntity.notFound().build()
+                );
+    }
+
+    private List<String> readSkills(String json) {
+
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+
+        try {
+            return objectMapper.readValue(
+                    json,
+                    objectMapper.getTypeFactory()
+                            .constructCollectionType(
+                                    List.class,
+                                    String.class
+                            )
+            );
+
+        } catch (Exception e) {
+            return List.of();
         }
     }
 
