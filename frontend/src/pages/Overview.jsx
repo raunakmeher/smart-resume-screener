@@ -2,20 +2,17 @@ import Card from '../components/Card'
 import ScoreDistribution from '../components/ScoreDistribution'
 import StatCard from '../components/StatCard'
 import StatusBadge from '../components/StatusBadge'
-import { EmptyState, InfoNote, LoadingState } from '../components/States'
+import { EmptyState, LoadingState } from '../components/States'
 import { ProgressBar } from '../components/ScoreCard'
 import { roundPercent, toPercent } from '../lib/format'
 
 export default function Overview({ resumes, jobs, screenings, loading }) {
   const finalScores = screenings.map((entry) => toPercent(entry.scoring?.finalScore))
-  const averageScore = finalScores.length
-    ? Math.round(finalScores.reduce((total, score) => total + score, 0) / finalScores.length)
-    : null
   const analyzedResumes = resumes.filter((resume) => resume.analyzed).length
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Resumes stored"
           value={loading ? '—' : resumes.length}
@@ -26,27 +23,7 @@ export default function Overview({ resumes, jobs, screenings, loading }) {
           value={loading ? '—' : jobs.length}
           hint={loading ? 'Loading from the database' : `${jobs.filter((job) => job.analyzed).length} analyzed`}
         />
-        <StatCard
-          label="Screenings this session"
-          value={screenings.length}
-          hint="Results run from this browser session"
-        />
-        <StatCard
-          label="Average final score"
-          value={averageScore === null ? '—' : `${averageScore}%`}
-          hint={
-            averageScore === null
-              ? 'Available after the first screening'
-              : `Mean of ${finalScores.length} score${finalScores.length === 1 ? '' : 's'} from this session`
-          }
-        />
       </div>
-
-      <InfoNote>
-        Resume and job counts are read from the database. Screening totals are session-scoped, because the backend
-        exposes stored results per job rather than across all jobs. The Ranking page shows every stored result for the
-        selected job, including screenings from earlier sessions.
-      </InfoNote>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card title="Jobs" description="Jobs stored in the database and available for screening and ranking.">
